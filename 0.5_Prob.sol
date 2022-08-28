@@ -1,28 +1,33 @@
 //SPDX-License-Identifier: UNLICENSED
+
 pragma solidity >=0.5.0 < 0.9.0;
 contract myDapp{
+    
+    
+    // owner and contract have different address
     address payable public owner;
-    address payable public ca;
-    uint public tbal = ca.balance;
+    address payable public ca;              //address of the contract
+    uint public tbal = ca.balance;          //contract balance
 
-    mapping(address => uint) plus;
-    address[] addPlus;
-    uint public totalPlus=0;
+    mapping(address => uint) plus;          //mapping to show the people who voted to plus
+    address[] addPlus;                      //addresses of the people 
+    uint public totalPlus=0;                //total ether put to stake for plus
 
-    mapping(address => uint) minus;
-    address[] addMinus;
-    uint public totalMinus=0;
+    mapping(address => uint) minus;         //mapping to show the people who voted to plus
+    address[] addMinus;                     //addresses of the people 
+    uint public totalMinus=0;               //total ether put to stake for plus
 
-    uint public deadline = block.timestamp;
-    bool public button = false;
+    uint public deadline = block.timestamp; //the deadline after which no staking happens but only results arrive
+    bool public button = false;             //whether deadline has approached or not 
 
     constructor() {
-        owner = payable(msg.sender);
+        owner = payable(msg.sender);        
         ca = payable(address(this));
         
     }
 
-    function isPassed() public view returns(bool){
+    
+    function isPassed() public view returns(bool){      //this function finds whether the deadline has passed or not 
         if(deadline < block.timestamp){
             return true;
         }
@@ -31,31 +36,30 @@ contract myDapp{
         }
     }
 
-    function doPlus() payable public{      
-        require(msg.value >= 0.05 ether,"bring 0.05 ether minimum");
+    function doPlus() payable public{                   //function to stake ether on "plus"
+        require(msg.value >= 0.05 ether,"bring 0.05 ether minimum");  // min ether to be 0.05
         
-        if(button==false && totalPlus==0 && totalMinus==0){
+        if(button==false && totalPlus==0 && totalMinus==0){       //if deadline has crossed and there was nothing on stake 
             button=true;
             deadline = block.timestamp + 30 seconds;
         }
         
-        if(block.timestamp < deadline && button==true){
-        addPlus.push(msg.sender);
-        plus[msg.sender] = msg.value;
-        totalPlus += msg.value;
-        ca.call{value:msg.value};
-        tbal = ca.balance;
+        if(block.timestamp < deadline && button==true){         //if the deadline has not reached but the staking status was "on"
+        addPlus.push(msg.sender);                           // push the address of the person to the list
+        plus[msg.sender] = msg.value;                       // also put it inside the mapping 
+        totalPlus += msg.value;                             // increase the total stake put for "plus"
+        ca.call{value:msg.value};                           // send money to the contract 
+        tbal = ca.balance;                                  // update the balance of the contract
         }
 
         else if(block.timestamp > deadline && (totalPlus!=0 || totalMinus!=0) ){
-            packUp();
-            doMinus();
+            packUp();       // if this function is called after the deadline and the previous results were not accomplished then those will be declared first
+            doMinus();      // after previous results were declared, then this function will be recalled
         }
     }
 
-    function doMinus() payable public{
-        require(msg.value >= 0.05 ether,"bring 0.05 ether minimum");
-        
+    function doMinus() payable public{                  // same as the upper function but for people who have staked for "minus"
+        require(msg.value >= 0.05 ether,"bring 0.05 ether minimum");    
         if(button==false && totalPlus==0 && totalMinus==0){
             button=true;
             deadline = block.timestamp + 30 seconds;
@@ -75,23 +79,23 @@ contract myDapp{
         }
     }
 
-    function packUp() public{
-        require(totalPlus > 0 || totalMinus>0,"everything is empty");
-        require(deadline < block.timestamp,"time to hone de");
+    function packUp() public{               // this function is made to give results 
+        require(totalPlus > 0 || totalMinus>0,"everything is empty");       //something must have been put to the stake
+        require(deadline < block.timestamp,"time to hone de");              // deadline must have reached
         
-        if(totalPlus > totalMinus){
-            for(uint i=0; i < addMinus.length; i++){
-                payable(addMinus[i]).send(((7 * minus[addMinus[i]])/4));
-                minus[addMinus[i]]=0;
+        if(totalPlus > totalMinus){                 // if the "plus" stakes are more than the "minus"
+            for(uint i=0; i < addMinus.length; i++){        
+                payable(addMinus[i]).send(((7 * minus[addMinus[i]])/4));        // send all the people who have staked on "minus" after doing 1.75 times their ether
+                minus[addMinus[i]]=0;   // update their staked ether to zero in the mapping 
             }
-            owner.send((totalMinus/5));
+            owner.send((totalMinus/5));     // send owner the left over amount, leaving only some amount for gas fees
 
             for(uint i=0; i < addMinus.length; i++){
-                addMinus.pop();
+                addMinus.pop();         //also popping the addresses of the people from the list
             }
         }
 
-        if(totalPlus < totalMinus){
+        if(totalPlus < totalMinus){     // same as above but if the "minus" stakes are more than the "plus" 
             for(uint i=0; i < addPlus.length; i++){
                 payable(addPlus[i]).send(((7 * plus[addPlus[i]])/4));
                 plus[addPlus[i]]=0;
@@ -101,13 +105,14 @@ contract myDapp{
                 addPlus.pop();
             }
         }
-
-        totalMinus=0;
+        // resetting the state variables 
+        totalMinus=0;      
         totalPlus=0;
         button=false;
         tbal = ca.balance;
     }
 
+    // function for the owner to withdraw amount from the contract
     function withdraw(uint give) public{
         require(msg.sender == owner);
         payable(owner).transfer(give * 1000000000000000000);
