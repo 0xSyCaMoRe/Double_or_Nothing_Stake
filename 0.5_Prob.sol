@@ -4,7 +4,7 @@ contract myDapp{
 
     address payable public owner;
     address payable public ca;          //address of the contract
-    uint public tbal = ca.balance;         //contract balance
+    // uint public tbal = ca.balance;         //contract balance
 
     mapping(address => uint) stakers;       //mapping for stakers
     
@@ -15,7 +15,6 @@ contract myDapp{
     uint public totalMinus=0;               //total ether put to stake for minus           
 
     uint public deadline = block.timestamp;     //the deadline after which no staking happens but only results arrive
-    bool public button = false;                 //whether deadline has approached or not
 
     constructor() public{
         owner = payable(msg.sender);
@@ -33,14 +32,13 @@ contract myDapp{
     // }
 
     function doPlus() payable public{                   //function to stake ether on "plus"
-        require(msg.value >= 0.006 ether,"bring 0.05 ether minimum");
+        require(msg.value >= 0.006 ether,"bring 0.006 ether minimum");
         
-        if(button==false && totalPlus==0 && totalMinus==0){     //if deadline has crossed and there was nothing on stake
-            button=true;
+        if(totalPlus==0 && totalMinus==0){     //if deadline has crossed and there was nothing on stake
             deadline = block.timestamp + 30 seconds;
         }
         
-        if(block.timestamp < deadline && button==true){         //if the deadline has not reached but the staking status was "on"
+        if(block.timestamp < deadline){         //if the deadline has not reached but the staking status was "on"
         addPlus.push(msg.sender);                               // push the address of the person to the list
         stakers[msg.sender] = msg.value;                        // also put it inside the mapping 
         totalPlus += msg.value;                                 // increase the total stake put for "plus"
@@ -50,19 +48,18 @@ contract myDapp{
 
         else if(block.timestamp > deadline && (totalPlus!=0 || totalMinus!=0) ){
             packUp();               // if this function is called after the deadline and the previous results were not accomplished then those will be declared first
-            doMinus();                  // after previous results were declared, then this function will be recalled
+            doPlus();                  // after previous results were declared, then this function will be recalled
         }
     }
 
     function doMinus() payable public{              // same as the upper function but for people who have staked for "minus"
-        require(msg.value >= 0.006 ether,"bring 0.05 ether minimum");
+        require(msg.value >= 0.006 ether,"bring 0.006 ether minimum");
         
-        if(button==false && totalPlus==0 && totalMinus==0){
-            button=true;
+        if(totalPlus==0 && totalMinus==0){
             deadline = block.timestamp + 30 seconds;
         }
 
-        if(block.timestamp < deadline && button==true){      
+        if(block.timestamp < deadline){      
         addMinus.push(msg.sender);
         stakers[msg.sender] = msg.value;
         totalMinus += msg.value;
@@ -112,7 +109,6 @@ contract myDapp{
         // resetting the state variables 
         totalMinus=0;
         totalPlus=0;
-        button=false;
         tbal = ca.balance;
     }
  
